@@ -15,7 +15,7 @@ const initialState: TIngredientsState = {
   error: null,
 };
 
-export const fetchIngredients = createAsyncThunk(
+export const fetchIngredients = createAsyncThunk<TIngredient[], void, { rejectValue: string }>(
   'ingredients/fetch',
   async (_, { rejectWithValue }) => {
   try {
