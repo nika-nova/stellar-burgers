@@ -5,7 +5,6 @@ import type { RootState } from '@services/store';
 import { createSelector } from '@reduxjs/toolkit';
 
 import { useDispatch, useSelector } from '@services/store';
-import type {TIngredient} from '@utils-types';
 
 import {
   setOrderRequest,
@@ -17,7 +16,7 @@ import { createOrderThunk } from '@services/slices/orderSlice';
 import type { TConstructorIngredient, TOrder } from '@utils-types';
 
 const selectBun = (state: RootState) => state.burgerConstructor.bun;
-const selectIngredients = (state: RootState): TIngredient[] => state.burgerConstructor.ingredients;
+const selectIngredients = (state: RootState) => state.burgerConstructor.ingredients;
 
 export const selectConstructorItems = createSelector(
   [selectBun, selectIngredients],
