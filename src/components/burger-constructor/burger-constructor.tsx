@@ -1,24 +1,54 @@
 import { BurgerConstructorUI } from '@ui';
 import { useMemo } from 'react';
+import type { RootState } from '@services/store';
 
-import type { TConstructorIngredient, TConstructorState, TOrder } from '@utils-types';
+import { createSelector } from '@reduxjs/toolkit';
+
+import { useDispatch, useSelector } from '@services/store';
+
+import {
+  setOrderRequest,
+  setOrderModalData,
+} from '@services/slices/constructorSlice';
+
+import { createOrderThunk } from '@services/slices/orderSlice';
+
+import type { TConstructorIngredient, TOrder } from '@utils-types';
+
+const selectBun = (state: RootState) => state.burgerConstructor.bun;
+const selectIngredients = (state: RootState) => state.burgerConstructor.ingredients;
+
+export const selectConstructorItems = createSelector(
+  [selectBun, selectIngredients],
+  (bun, ingredients) => ({ bun, ingredients })
+);
+const selectOrderRequest = (state: RootState): boolean => state.burgerConstructor.orderRequest;
+const selectOrderModalData = (state: RootState): TOrder | null => state.burgerConstructor.orderModalData;
 
 export const BurgerConstructor = (): React.JSX.Element | null => {
-  /** TODO: Взять переменные constructorItems, orderRequest и orderModalData из стора */
-  const constructorItems: TConstructorState = {
-    bun: null,
-    ingredients: [],
-  };
-  const orderRequest = false;
-  const orderModalData: TOrder | null = null;
+  const dispatch = useDispatch();
+
+  const constructorItems = useSelector(selectConstructorItems);
+  const orderRequest = useSelector(selectOrderRequest);
+  const orderModalData = useSelector(selectOrderModalData);
 
   const onOrderClick = (): void => {
     if (!constructorItems.bun || orderRequest) return;
-    // TODO: Оформить заказ
+
+    dispatch(setOrderRequest(true));
+    void dispatch(createOrderThunk(constructorItems))
+      .unwrap()
+      .then((order) => {
+        dispatch(setOrderModalData(order));
+      })
+      .catch(() => {
+        dispatch(setOrderRequest(false));
+      });
   };
 
   const closeOrderModal = (): void => {
-    // TODO: Закрыть модальное окно и сбросить заказ
+    dispatch(setOrderModalData(null));
+    dispatch(setOrderRequest(false));
   };
 
   const price = useMemo(
