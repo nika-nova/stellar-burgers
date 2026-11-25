@@ -1,13 +1,15 @@
-import { createSlice, nanoid } from '@reduxjs/toolkit';
+import { createSlice, nanoid, createSelector } from '@reduxjs/toolkit';
+
 import { createOrderThunk } from './orderSlice';
 
+import type { PayloadAction } from '@reduxjs/toolkit';
+import type { RootState } from '@services/store';
 import type {
   TConstructorIngredient,
   TIngredient,
   TConstructorState,
   TOrder,
 } from '@utils/types';
-import type { PayloadAction } from '@reduxjs/toolkit';
 
 export type TConstructorFullState = TConstructorState & {
   orderRequest: boolean;
@@ -44,18 +46,9 @@ const constructorSlice = createSlice({
       },
     },
     removeIngredient: (state, action: PayloadAction<string>) => {
-      state.ingredients = state.ingredients.filter(
-        (item) => item.id !== action.payload
-      );
+      state.ingredients = state.ingredients.filter((item) => item.id !== action.payload);
     },
-    clearConstructor: (state) => {
-      state.bun = null;
-      state.ingredients = [];
-    },
-    moveIngredient: (
-      state,
-      action: PayloadAction<{ from: number; to: number }>
-    ) => {
+    moveIngredient: (state, action: PayloadAction<{ from: number; to: number }>) => {
       const { from, to } = action.payload;
       if (from < 0 || from >= state.ingredients.length) return;
 
@@ -72,17 +65,41 @@ const constructorSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(createOrderThunk.fulfilled, (state) => {
-      state.bun = null;
-      state.ingredients = [];
-    });
+    builder
+      .addCase(createOrderThunk.pending, (state) => {
+        state.orderRequest = true;
+      })
+      .addCase(createOrderThunk.fulfilled, (state, action) => {
+        state.orderRequest = false;
+        state.orderModalData = action.payload;
+        state.bun = null;
+        state.ingredients = [];
+      })
+      .addCase(createOrderThunk.rejected, (state) => {
+        state.orderRequest = false;
+      });
   },
 });
+
+export const selectBun = (state: RootState) => state.burgerConstructor.bun;
+
+export const selectIngredients = (state: RootState) =>
+  state.burgerConstructor.ingredients;
+
+export const selectConstructorItems = createSelector(
+  [selectBun, selectIngredients],
+  (bun, ingredients) => ({ bun, ingredients })
+);
+
+export const selectOrderRequest = (state: RootState): boolean =>
+  state.burgerConstructor.orderRequest;
+
+export const selectOrderModalData = (state: RootState): TOrder | null =>
+  state.burgerConstructor.orderModalData;
 
 export const {
   addIngredient,
   removeIngredient,
-  clearConstructor,
   moveIngredient,
   setOrderRequest,
   setOrderModalData,

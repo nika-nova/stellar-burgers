@@ -1,13 +1,13 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { getOrderByNumberApi, orderBurgerApi } from '@api';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+
 import type { TOrder, TConstructorState } from '@utils-types';
-import type { RootState } from '@services/store';
 
 type TOrdersState = {
   items: Record<string, TOrder>;
   isLoading: boolean;
   error: string | null;
-}
+};
 
 const initialState: TOrdersState = {
   items: {},
@@ -15,39 +15,46 @@ const initialState: TOrdersState = {
   error: null,
 };
 
-export const createOrderThunk = createAsyncThunk<TOrder, TConstructorState, { rejectValue: string }>(
-  'orders/createOrder',
-  async (constructorItems, { rejectWithValue }) => {
-    try {
-      const ids: string[] = [
-    ...(constructorItems.bun ? [constructorItems.bun._id] : []),
-    ...constructorItems.ingredients.map(i => i._id)
-  ];
+export const createOrderThunk = createAsyncThunk<
+  TOrder,
+  TConstructorState,
+  { rejectValue: string }
+>('orders/createOrder', async (constructorItems, { rejectWithValue }) => {
+  try {
+    const ids: string[] = [
+      ...(constructorItems.bun
+        ? [constructorItems.bun._id, constructorItems.bun._id]
+        : []),
+      ...constructorItems.ingredients.map((i) => i._id),
+    ];
 
-      const data = await orderBurgerApi(ids);
-      return data.order;
-    } catch (err) {
-      return rejectWithValue(
-        err instanceof Error ? err.message : 'Не удалось отправить заказ'
-      );
-    }
+    const data = await orderBurgerApi(ids);
+    return data.order;
+  } catch (err) {
+    return rejectWithValue(
+      err instanceof Error ? err.message : 'Не удалось отправить заказ'
+    );
   }
-);
+});
 
-export const fetchOrderByNumber = createAsyncThunk<TOrder, string, { rejectValue: string }>(
-  'orders/fetchByNumber',
-  async (string, { rejectWithValue }) => {
-    try {
-      const number = Number(string);
-      const response = await getOrderByNumberApi(number);
-      return response.orders[0];
-    } catch (err) {
-      return rejectWithValue(
-        err instanceof Error ? err.message : 'Не удалось загрузить заказ'
-      );
+export const fetchOrderByNumber = createAsyncThunk<
+  TOrder,
+  number,
+  { rejectValue: string }
+>('orders/fetchByNumber', async (orderNumber, { rejectWithValue }) => {
+  try {
+    const response = await getOrderByNumberApi(orderNumber);
+    const order = response.orders[0];
+    if (!order) {
+      return rejectWithValue('Заказ не найден');
     }
+    return order;
+  } catch (err) {
+    return rejectWithValue(
+      err instanceof Error ? err.message : 'Не удалось загрузить заказ'
+    );
   }
-);
+});
 
 const ordersSlice = createSlice({
   name: 'orders',
@@ -91,9 +98,3 @@ const ordersSlice = createSlice({
 });
 
 export default ordersSlice.reducer;
-
-export const selectOrderByNumber = (number: string) => (state: RootState) => {
-  return state.orders.items[number] ?? null;
-};
-
-export const { clearOrderByNumber } = ordersSlice.actions;

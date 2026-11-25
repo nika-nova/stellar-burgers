@@ -1,10 +1,4 @@
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from '@services/store';
-
-import { AppHeader, Modal, OrderInfo } from '@components';
-import { Preloader } from '@ui';
-
+import { AppHeader, Modal, OrderInfo, IngredientDetails } from '@components';
 import {
   ConstructorPage,
   Feed,
@@ -16,16 +10,25 @@ import {
   ProfileOrders,
   NotFound404,
 } from '@pages';
+import { Preloader } from '@ui';
+import { useEffect } from 'react';
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 
-import { IngredientDetails } from '@components';
+import {
+  fetchIngredients,
+  selectIngredients,
+  selectIsLoading,
+  selectError,
+} from '@services/slices/ingredientsSlice';
+import { fetchUser } from '@services/slices/userSlice';
+import { useDispatch, useSelector } from '@services/store';
 
-import type { AppContentProps } from './type';
 import { ProtectedRoute } from '../../routing/ProtectedRoute';
 
-import { fetchIngredients, selectIngredients, selectIsLoading, selectError } from '@services/slices/ingredientsSlice';
-import { fetchUser } from '@services/slices/userSlice';
+import type { AppContentProps } from './type';
 
 import '../../index.css';
+
 import styles from './app.module.css';
 
 const App = (): React.JSX.Element => {
@@ -53,7 +56,6 @@ const App = (): React.JSX.Element => {
 };
 
 export default App;
-
 
 /* Маршруты показываются только когда ингредиенты загружены: без них не
    отрисовать ни конструктор, ни состав заказа. */
@@ -87,12 +89,16 @@ const AppContent = ({
 const RouteComponent = (): React.JSX.Element => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { number } = useParams<{ number: string }>();
 
-  const backgroundLocation = (location.state as { background?: Location } | null)?.background;
+  const backgroundLocation = (location.state as { background?: Location } | null)
+    ?.background;
 
   const handleCloseModal = (): void => {
     void navigate(-1);
   };
+
+  const modalTitle = number ? `Заказ №${number}` : '';
 
   return (
     <>
@@ -150,12 +156,7 @@ const RouteComponent = (): React.JSX.Element => {
           }
         />
 
-        <Route
-          path="/feed/:number"
-          element={
-              <OrderInfo />
-          }
-        />
+        <Route path="/feed/:number" element={<OrderInfo />} />
         <Route
           path="/ingredients/:id"
           element={
@@ -171,7 +172,7 @@ const RouteComponent = (): React.JSX.Element => {
           path="/profile/orders/:number"
           element={
             <ProtectedRoute>
-                <OrderInfo />
+              <OrderInfo />
             </ProtectedRoute>
           }
         />
@@ -192,7 +193,7 @@ const RouteComponent = (): React.JSX.Element => {
           <Route
             path="/feed/:number"
             element={
-              <Modal title="" onClose={handleCloseModal}>
+              <Modal title={modalTitle} onClose={handleCloseModal}>
                 <OrderInfo />
               </Modal>
             }
@@ -201,7 +202,7 @@ const RouteComponent = (): React.JSX.Element => {
             path="/profile/orders/:number"
             element={
               <ProtectedRoute mode="private">
-                <Modal title="" onClose={handleCloseModal}>
+                <Modal title={modalTitle} onClose={handleCloseModal}>
                   <OrderInfo />
                 </Modal>
               </ProtectedRoute>

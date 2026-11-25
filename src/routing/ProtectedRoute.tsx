@@ -1,37 +1,45 @@
+import { Preloader } from '@ui';
 import { Navigate, useLocation } from 'react-router-dom';
+
+import { selectIsLoggedIn } from '@services/slices/userSlice';
 import { useSelector } from '@services/store';
-import type { RootState } from '@services/store';
 
 type ProtectionMode = 'public' | 'private';
 
-interface ProtectedRouteProps {
+type ProtectedRouteProps = {
   children: React.ReactNode;
   mode?: ProtectionMode;
-}
+};
 
 export const ProtectedRoute = ({
   children,
   mode = 'private',
 }: ProtectedRouteProps): React.JSX.Element => {
-  const { user, isAuthChecked } = useSelector((state: RootState) => state.user);
+  const isLoggedIn = useSelector(selectIsLoggedIn);
+  const { isAuthChecked } = useSelector((state) => state.user);
   const location = useLocation();
-  const isLoggedIn = !!user;
 
   if (!isAuthChecked) {
-    return <></>;
+    return <Preloader />;
   }
 
   if (mode === 'private') {
     if (!isLoggedIn) {
-      return (
-        <Navigate
-          to="/login"
-          state={{ from: location }}
-          replace
-        />
-      );
+      return <Navigate to="/login" state={{ from: location }} replace />;
     }
     return <>{children}</>;
+  }
+
+  if (isLoggedIn) {
+    const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
+
+    const publicPaths = ['/login', '/register', '/forgot-password'];
+
+    if (from && !publicPaths.includes(from)) {
+      return <Navigate to={from} replace />;
+    }
+
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

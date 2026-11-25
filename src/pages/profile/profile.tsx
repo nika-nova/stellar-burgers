@@ -1,16 +1,14 @@
 import { ProfileUI } from '@ui-pages';
 import { type SyntheticEvent, useEffect, useState } from 'react';
 
-import { useDispatch, useSelector } from '@services/store';
 import { updateUser } from '@services/slices/userSlice';
-import type { TRegisterData } from '@api';
+import { useDispatch, useSelector } from '@services/store';
 
-import type { RootState } from '@services/store';
-import type { TUser } from '@utils-types';
+import type { TRegisterData } from '@api';
 
 export const Profile = (): React.JSX.Element => {
   const dispatch = useDispatch();
-  const user = useSelector((state: RootState) => state.user.user) as TUser | null;
+  const user = useSelector((state) => state.user.user);
 
   const [formValue, setFormValue] = useState({
     name: user?.name ?? '',

@@ -1,54 +1,43 @@
 import { BurgerConstructorUI } from '@ui';
 import { useMemo } from 'react';
-import type { RootState } from '@services/store';
-
-import { createSelector } from '@reduxjs/toolkit';
-
-import { useDispatch, useSelector } from '@services/store';
+import { useNavigate } from 'react-router-dom';
 
 import {
-  setOrderRequest,
-  setOrderModalData,
+  selectConstructorItems,
+  selectOrderRequest,
+  selectOrderModalData,
 } from '@services/slices/constructorSlice';
-
 import { createOrderThunk } from '@services/slices/orderSlice';
+import { selectIsLoggedIn } from '@services/slices/userSlice';
+import { useDispatch, useSelector } from '@services/store';
 
-import type { TConstructorIngredient, TOrder } from '@utils-types';
-
-const selectBun = (state: RootState) => state.burgerConstructor.bun;
-const selectIngredients = (state: RootState) => state.burgerConstructor.ingredients;
-
-export const selectConstructorItems = createSelector(
-  [selectBun, selectIngredients],
-  (bun, ingredients) => ({ bun, ingredients })
-);
-const selectOrderRequest = (state: RootState): boolean => state.burgerConstructor.orderRequest;
-const selectOrderModalData = (state: RootState): TOrder | null => state.burgerConstructor.orderModalData;
+import type { TConstructorIngredient } from '@utils-types';
 
 export const BurgerConstructor = (): React.JSX.Element | null => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const constructorItems = useSelector(selectConstructorItems);
   const orderRequest = useSelector(selectOrderRequest);
   const orderModalData = useSelector(selectOrderModalData);
+  const isLoggedIn = useSelector(selectIsLoggedIn);
+  const { isAuthChecked } = useSelector((state) => state.user);
 
   const onOrderClick = (): void => {
+    if (!isAuthChecked) return;
+
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+
     if (!constructorItems.bun || orderRequest) return;
 
-    dispatch(setOrderRequest(true));
-    void dispatch(createOrderThunk(constructorItems))
-      .unwrap()
-      .then((order) => {
-        dispatch(setOrderModalData(order));
-      })
-      .catch(() => {
-        dispatch(setOrderRequest(false));
-      });
+    void dispatch(createOrderThunk(constructorItems));
   };
 
   const closeOrderModal = (): void => {
-    dispatch(setOrderModalData(null));
-    dispatch(setOrderRequest(false));
+    dispatch({ type: 'burgerConstructor/setOrderModalData', payload: null });
   };
 
   const price = useMemo(

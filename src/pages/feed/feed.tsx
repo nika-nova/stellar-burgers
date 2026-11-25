@@ -1,17 +1,14 @@
 import { Preloader } from '@ui';
 import { FeedUI } from '@ui-pages';
-
 import { useEffect } from 'react';
-import { useDispatch, useSelector } from '@services/store';
 
-import type { TOrder } from '@utils-types';
 import { fetchFeed } from '@services/slices/feedSlice';
-import type { RootState } from '@services/store';
+import { useDispatch, useSelector } from '@services/store';
 
 export const Feed = (): React.JSX.Element => {
   const dispatch = useDispatch();
-  const orders: TOrder[] = useSelector((state: RootState) => state.feed?.orders ?? []);
-  const isLoading = useSelector((state: RootState) => state.feed.isLoading);
+  const orders = useSelector((state) => state.feed?.orders ?? []);
+  const isLoading = useSelector((state) => state.feed.isLoading);
 
   useEffect(() => {
     void dispatch(fetchFeed());
@@ -21,9 +18,11 @@ export const Feed = (): React.JSX.Element => {
     void dispatch(fetchFeed());
   };
 
-  if (isLoading || !orders.length) {
+  if (!orders.length && isLoading) {
     return <Preloader />;
   }
 
-  return <FeedUI orders={orders} handleGetFeeds={handleGetFeeds} />;
+  return (
+    <FeedUI orders={orders} handleGetFeeds={handleGetFeeds} isLoading={isLoading} />
+  );
 };

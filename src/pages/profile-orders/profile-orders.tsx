@@ -1,16 +1,17 @@
 import { ProfileOrdersUI } from '@ui-pages';
+import { useEffect } from 'react';
 
-import type { TOrder } from '@utils-types';
-
-import { useSelector } from 'react-redux';
-
-import type { RootState } from '@/services/store';
+import { fetchUserOrders } from '@services/slices/feedSlice';
+import { useDispatch, useSelector } from '@services/store';
 
 export const ProfileOrders = (): React.JSX.Element => {
-  const orders = useSelector((state: RootState): TOrder[] => {
-    const list = Object.values(state.orders.items);
-    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  });
+  const dispatch = useDispatch();
 
-  return <ProfileOrdersUI orders={orders} />;
+  const userOrders = useSelector((state) => state.feed.userOrders);
+
+  useEffect(() => {
+    void dispatch(fetchUserOrders());
+  }, [dispatch]);
+
+  return <ProfileOrdersUI orders={userOrders} />;
 };

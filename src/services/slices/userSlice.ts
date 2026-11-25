@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { getCookie, deleteCookie, setCookie } from '@/utils/cookie';
 import {
   getUserApi,
   loginUserApi,
@@ -6,16 +6,18 @@ import {
   registerUserApi,
   updateUserApi,
 } from '@api';
-import { deleteCookie, setCookie } from '@/utils/cookie';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-import type { TUser } from '@utils/types';
 import type { TLoginData, TRegisterData } from '@api';
+import type { RootState } from '@services/store';
+import type { TUser } from '@utils/types';
 
 type TUserState = {
   user: TUser | null;
   isAuthChecked: boolean;
   isLoading: boolean;
   error: string | null;
+  registerError: string | null;
 };
 
 const initialState: TUserState = {
@@ -23,11 +25,17 @@ const initialState: TUserState = {
   isAuthChecked: false,
   isLoading: false,
   error: null,
+  registerError: null,
 };
 
 export const fetchUser = createAsyncThunk<TUser, void, { rejectValue: string }>(
   'user/fetchUser',
   async (_, { rejectWithValue }) => {
+    const token = getCookie('accessToken');
+    if (!token) {
+      throw new Error('NO_TOKEN');
+    }
+
     try {
       const data = await getUserApi();
       return data.user;
@@ -55,21 +63,20 @@ export const loginUser = createAsyncThunk<TUser, TLoginData, { rejectValue: stri
   }
 );
 
-export const registerUser = createAsyncThunk<TUser, TRegisterData, { rejectValue: string }>(
-  'user/registerUser',
-  async (data, { rejectWithValue }) => {
-    try {
-      const reg = await registerUserApi(data);
-      setCookie('accessToken', reg.accessToken);
-      localStorage.setItem('refreshToken', reg.refreshToken);
-      return reg.user;
-    } catch (err) {
-      return rejectWithValue(
-        err instanceof Error ? err.message : 'Ошибка регистрации'
-      );
-    }
+export const registerUser = createAsyncThunk<
+  TUser,
+  TRegisterData,
+  { rejectValue: string }
+>('user/registerUser', async (data, { rejectWithValue }) => {
+  try {
+    const reg = await registerUserApi(data);
+    setCookie('accessToken', reg.accessToken);
+    localStorage.setItem('refreshToken', reg.refreshToken);
+    return reg.user;
+  } catch (err) {
+    return rejectWithValue(err instanceof Error ? err.message : 'Ошибка регистрации');
   }
-);
+});
 
 export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
   'user/logoutUser',
@@ -86,19 +93,20 @@ export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
   }
 );
 
-export const updateUser = createAsyncThunk<TUser, Partial<TRegisterData>, { rejectValue: string }>(
-  'user/updateUser',
-  async (data, { rejectWithValue }) => {
-    try {
-      const upd = await updateUserApi(data);
-      return upd.user;
-    } catch (err) {
-      return rejectWithValue(
-        err instanceof Error ? err.message : 'Не удалось обновить профиль'
-      );
-    }
+export const updateUser = createAsyncThunk<
+  TUser,
+  Partial<TRegisterData>,
+  { rejectValue: string }
+>('user/updateUser', async (data, { rejectWithValue }) => {
+  try {
+    const upd = await updateUserApi(data);
+    return upd.user;
+  } catch (err) {
+    return rejectWithValue(
+      err instanceof Error ? err.message : 'Не удалось обновить профиль'
+    );
   }
-);
+});
 
 const userSlice = createSlice({
   name: 'user',
@@ -116,6 +124,14 @@ const userSlice = createSlice({
         state.isLoading = false;
       })
       .addCase(fetchUser.rejected, (state, action) => {
+        if (action.error.message === 'NO_TOKEN') {
+          state.user = null;
+          state.isAuthChecked = true;
+          state.isLoading = false;
+          state.error = null;
+          return;
+        }
+
         state.user = null;
         state.isAuthChecked = true;
         state.isLoading = false;
@@ -144,10 +160,11 @@ const userSlice = createSlice({
         state.user = action.payload;
         state.isAuthChecked = true;
         state.isLoading = false;
+        state.registerError = null;
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload ?? 'Ошибка регистрации';
+        state.registerError = action.payload ?? 'Ошибка регистрации. Попробуйте позже.';
       })
 
       .addCase(logoutUser.pending, (state) => {
@@ -178,5 +195,7 @@ const userSlice = createSlice({
       });
   },
 });
+
+export const selectIsLoggedIn = (state: RootState): boolean => !!state.user.user;
 
 export default userSlice.reducer;
